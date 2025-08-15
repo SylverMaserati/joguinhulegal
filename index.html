@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Alien Stage x 🏹</title>
+  <style>
+    body { background: #cce3ff; margin: 0; overflow: hidden; }
+    #gameCanvas { display: block; margin: 0 auto; background: linear-gradient(to top, #7ec850 60%, #cce3ff 100%); box-shadow: 0 0 20px #0004; border-radius: 10px; }
+    #startScreen, #selectScreen, #nivelScreen { position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100vw; height: 100vh; background: #cce3ff; z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: 'Arial Black', Arial, sans-serif; }
+    #startScreen { background: linear-gradient(to bottom, #cce3ff 80%, #7ec850 100%); }
+    #selectScreen { background: linear-gradient(to bottom, #e3e6fa 70%, #7ec850 100%); }
+    #nivelScreen { background: linear-gradient(to bottom, #e3e6fa 70%, #7ec850 100%); }
+    .start-title { font-size: 44px; color: #187b2b; text-shadow: 2px 2px 12px #0006, 0px 0px 12px #ffd700; margin-bottom: 38px; }
+    .start-btn { font-size: 30px; padding: 22px 55px; border-radius: 16px; background: #ffd700; color: #187b2b; font-weight: bold; border: none; box-shadow: 0 0 12px #0004; cursor: pointer; margin-top: 18px; transition: background .2s; }
+    .start-btnactive { background: #ffe877; }
+    .select-title { font-size: 34px; color: #187b2b; text-shadow: 1px 1px 8px #fff, 0px 0px 8px #ffd700; margin-bottom: 24px; }
+    #characters { display: flex; gap: 40px; margin-bottom: 24px; }
+    .character-card { background: #fff; border-radius: 16px; box-shadow: 0 0 16px #0002; display: flex; flex-direction: column; align-items: center; padding: 14px 12px 20px 12px; cursor: pointer; transition: transform .15s, box-shadow .15s; border: 4px solid transparent; width: 170px; }
+    .character-card.selected { border-color: #ffd700; transform: scale(1.08); box-shadow: 0 0 30px #ffd7006b; }
+    .character-img { width: 120px; height: 120px; object-fit: contain; border-radius: 12px; box-shadow: 0 0 8px #0003; background: #f7f7f7; margin-bottom: 8px; }
+    .character-name { font-size: 24px; font-weight: bold; color: #187b2b; text-shadow: 1px 1px 2px #ffd700; margin-bottom: 6px; }
+    .character-desc { font-size: 15px; color: #444; margin-bottom: 3px; text-align: center; }
+    .select-btn { font-size: 22px; padding: 10px 38px; border-radius: 12px; background: #187b2b; color: #fff; font-weight: bold; border: none; box-shadow: 0 0 10px #0002; cursor: pointer; margin-top: 6px; transition: background .2s; }
+    .select-btnactive { background: #145a1d; }
+    .nivel-title { font-size: 32px; color: #187b2b; margin-bottom: 24px; }
+    #niveis { display: flex; gap: 50px; }
+    .nivel-btn {
+      font-size: 23px; padding: 16px 38px; border-radius: 12px; background: #ffd700; color: #187b2b;
+      font-weight: bold; border: none; box-shadow: 0 0 10px #0002; cursor: pointer;
+      transition: background .2s;
+      opacity: 0.6;
+      pointer-events: none;
+    }
+    .nivel-btn.enabled {
+      opacity: 1;
+      pointer-events: auto;
+      background: #ffd700;
+    }
+    .nivel-btn:active { background: #ffe877; }
+    #info, #score, #surpriseContainer, #failContainer, #gameCanvas { z-index: 1; }
+    #score { position: absolute; top: 18px; left: 26px; background: #fff8; padding: 4px 18px; border-radius: 10px; font-family: sans-serif; font-size: 22px; font-weight: bold; color: #187b2b; text-align: center; min-width: 150px;}
+    #score.pontuada { font-size: 38px; min-width: 220px; transition: font-size 0.3s, min-width 0.3s;}
+    #surpriseContainer { position: fixed; top: 50%; left: 50%; width: 320px; height: 390px; transform: translate(-50%, -50%); z-index: 100; display: none; pointer-events: none; }
+    #surpriseLevel { position: absolute; top: 0; left: 0; width: 100%; text-align: center; font-size: 20px; font-family: 'Arial Black', Arial, sans-serif; color: #333; font-weight: bold; background: none; margin-top: 15px;}
+    #surpriseText { position: absolute; top: 38px; left: 0; width: 100%; text-align: center; font-size: 34px; font-family: 'Arial Black', Arial, sans-serif; color: #ffd700; text-shadow: 2px 2px 8px #000, 0px 0px 12px #187b2b; font-weight: bold; pointer-events: none; user-select: none; }
+    #surpriseScore { position: absolute; top: 84px; left: 0; width: 100%; text-align: center; font-size: 26px; font-family: 'Arial Black', Arial, sans-serif; color: #fff; text-shadow: 2px 2px 6px #187b2b, 0px 0px 10px #000; font-weight: bold; pointer-events: none; user-select: none; }
+    #surpriseGif { position: absolute; left: 0; top: 130px; width: 100%; height: 200px; object-fit: contain; border-radius: 18px; box-shadow: 0 0 30px #000b; background: rgba(0,0,0,0.15); display: block; }
+    #restartBtnVictory, #nextLevelBtn, #backToStartBtn, #restartBtn, #failBackToStartBtn {
+      font-size: 18px; padding: 7px 32px; border-radius: 10px; background: #187b2b; color: #fff;
+      font-weight: bold; border: none; box-shadow: 0 0 10px #0002; cursor: pointer;
+      transition: background .2s; pointer-events: all; margin: 8px;
+      display:inline-block;
+    }
+    #failContainer { position: fixed; top: 35%; left: 50%; width: 320px; height: 230px; transform: translate(-50%, -50%); z-index: 100; background: rgba(255,255,255,0.96); border-radius: 16px; box-shadow: 0 0 30px #000b; display: none; pointer-events: none; }
+    #failLevel { position: absolute; top: 0; left: 0; width: 100%; text-align: center; font-size: 20px; font-family: 'Arial Black', Arial, sans-serif; color: #b33; font-weight: bold; background: none; margin-top: 15px;}
+    #failText { position: absolute; top: 38px; left: 0; width: 100%; text-align: center; font-size: 32px; font-family: 'Arial Black', Arial, sans-serif; color: #d00; text-shadow: 2px 2px 8px #fff, 0px 0px 12px #222; font-weight: bold; pointer-events: none; user-select: none; }
+    #failGif { position: absolute; left: 0; top: 82px; width: 100%; height: 110px; object-fit: contain; border-radius: 12px; box-shadow: 0 0 14px #000b; background: rgba(0,0,0,0.13); display: block; }
+    #aljavaContainer { position: absolute; left: 0; top: 0; z-index: 10; pointer-events: none; }
+    #aljavaFlechas {
+      font-family: 'Arial Black', Arial, sans-serif;
+      font-size: 32px;
+      color: #187b2b;
+      text-shadow: 1px 1px 8px #fff, 0px 0px 8px #ffd700;
+      position: absolute;
+      left: 52px;
+      top: 12px;
+      min-width: 40px;
+      text-align: left;
+      pointer-events: none;
+    }
+    #bgmAbertura, #bgmIvan, #bgmLuka, #flechaSound { display: none; }
+
+    /* INTEGRAÇÃO PARABÉNS */
+    #parabensDemais {
+      display: none;
+      position: fixed;
+      z-index: 300;
+      left: 0; top: 0; width: 100vw; height: 100vh;
+      background: rgba(255,255,255,0.96);
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      font-size: 48px;
+      color: #187b2b;
+      font-family: 'Arial Black', Arial, sans-serif;
+      text-align: center;
+      padding: 30px;
+    }
+    #video-tela-festa {
+      display: none;
+      margin: 0 auto;
+      border-radius: 24px;
+      box-shadow: 0 0 30px #0007;
+      max-width: 90vw;
+      max-height: 60vh;
+    }
+  </style>
+</head>
+<body>
+  <div id="startScreen">
+    <div class="start-title">Alien Stage X 🏹</div>
+    <button class="start-btn" id="startBtn">START</button>
+  </div>
+  <div id="selectScreen" style="display:none;">
+    <div class="select-title">Selecione seu personagem</div>
+    <div id="characters"></div>
+    <button class="select-btn" id="selectBtn" disabled>Jogar</button>
+  </div>
+  <div id="nivelScreen" style="display:none;">
+    <div class="nivel-title">Escolha o nível</div>
+    <div id="niveis">
+      <button class="nivel-btn enabled" id="nivelFacilBtn">Fácil</button>
+      <button class="nivel-btn" id="nivelMedioBtn">Médio</button>
+      <button class="nivel-btn" id="nivelDificilBtn">Impossível</button>
+    </div>
+  </div>
+  <canvas id="gameCanvas" width="900" height="500"></canvas>
+  <div id="aljavaContainer" style="display:none;">
+    <img id="aljavaImg" src="aljava.png" style="width:48px;height:64px;vertical-align:middle;">
+    <span id="aljavaFlechas">10</span>
+  </div>
+  <audio id="bgmAbertura" src="abertura.mp3" loop></audio>
+  <audio id="bgmIvan" src="ivan.mp3" loop></audio>
+  <audio id="bgmLuka" src="luka.mp3" loop></audio>
+  <audio id="flechaSound" src="flecha.mp3"></audio>
+  <div id="surpriseContainer">
+    <span id="surpriseLevel"></span>
+    <span id="surpriseText">Parabéns!</span>
+    <span id="surpriseScore"></span>
+    <img id="surpriseGif" src="" alt="Surpresa">
+    <div style="text-align:center;position:absolute;left:0;bottom:20px;width:100%;">
+      <button id="restartBtnVictory">Recomeçar</button>
+      <button id="nextLevelBtn">Próximo Nível</button>
+      <button id="backToStartBtn">Voltar ao Início</button>
+    </div>
+  </div>
+  <div id="failContainer">
+    <span id="failLevel"></span>
+    <span id="failText">Tente Novamente!</span>
+    <img id="failGif" src="" alt="Derrota" style="display:none;">
+    <div style="text-align:center;position:absolute;left:0;bottom:8px;width:100%;">
+      <button id="restartBtn">Recomeçar</button>
+      <button id="failBackToStartBtn">Voltar ao Início</button>
+    </div>
+  </div>
+  <div id="info">
+    Toque ou clique <b>na ponta de trás da flecha</b>, puxe para qualquer direção e solte para atirar!<br>
+    O arco gira 360 graus completos, acompanhando o puxão!<br>
+    <b>Escolha personagem e nível de dificuldade</b>
+  </div>
+  <div id="score">Pontuação 0</div>
+
+  <!-- INTEGRAÇÃO PARABÉNS -->
+  <div id="parabensDemais">
+    <div style="margin-bottom:40px;">PARABÉNS<br>VOCÊ É DEMAIS 🎉🥳✨</div>
+    <video id="video-tela-festa" width="600" controls>
+      <source src="hard.mp4" type="video/mp4">
+      Seu navegador não suporta vídeo em HTML5.
+    </video>
+    <audio id="audio-maislegal" src="maislegal.mp3"></audio>
+  </div>
+
+  <script>
+    const CHARACTERS = [
+      {
+        id: 'ivan',
+        nome: 'Ivan',
+        desc: 'O TOP!',
+        chooseImg: 'surprise3.png',
+        charImg: 'surprise.png',
+        winImg: 'Surprise1.png',
+        loseImg: 'Surprise2.png'
+      },
+      {
+        id: 'luka',
+        nome: 'Luka',
+        desc: 'O MAIS TOP!',
+        chooseImg: 'SurpriseL.png',
+        charImg: 'SurpriseLL.png',
+        winImg: 'SurpriseL1.png',
+        loseImg: 'SurpriseLL2.png'
+      }
+    ];
+    // Revisado: fácil 40, médio 30, impossível 20 no centro; valores equivalentes decrescentes
+    const LEVELS = [
+      {
+        id: 'facil', nome: 'Fácil',
+        pontos: [40, 24, 14, 8, 4, 0] // centro, 2, 3, 4, 5, fora
+      },
+      {
+        id: 'medio', nome: 'Médio',
+        pontos: [30, 18, 11, 6, 3, 0]
+      },
+      {
+        id: 'dificil', nome: 'Impossível',
+        pontos: [20, 12, 7, 4, 2, 0]
+      }
+    ];
+    const PONTOS_PARA_VENCER = 100;
+    let selectedChar = null;
+    let selectedLevel = LEVELS[0];
+    let nivelIndex = 0;
+
+    // DOM
+    const startScreen = document.getElementById('startScreen');
+    const selectScreen = document.getElementById('selectScreen');
+    const nivelScreen = document.getElementById('nivelScreen');
+    const startBtn = document.getElementById('startBtn');
+    const selectBtn = document.getElementById('selectBtn');
+    const charactersDiv = document.getElementById('characters');
+    const nivelFacilBtn = document.getElementById('nivelFacilBtn');
+    const nivelMedioBtn = document.getElementById('nivelMedioBtn');
+    const nivelDificilBtn = document.getElementById('nivelDificilBtn');
+    const aljavaContainer = document.getElementById('aljavaContainer');
+    const aljavaFlechas = document.getElementById('aljavaFlechas');
+    const bgmAbertura = document.getElementById('bgmAbertura');
+    const bgmIvan = document.getElementById('bgmIvan');
+    const bgmLuka = document.getElementById('bgmLuka');
+    const flechaSound = document.getElementById('flechaSound');
+    const scoreDiv = document.getElementById('score');
+    const surpriseContainer = document.getElementById('surpriseContainer');
+    const surpriseLevel = document.getElementById('surpriseLevel');
+    const surpriseText = document.getElementById('surpriseText');
+    const surpriseGif = document.getElementById('surpriseGif');
+    const surpriseScore = document.getElementById('surpriseScore');
+    const restartBtnVictory = document.getElementById('restartBtnVictory');
+    const nextLevelBtn = document.getElementById('nextLevelBtn');
+    const backToStartBtn = document.getElementById('backToStartBtn');
+    const failContainer = document.getElementById('failContainer');
+    const failLevel = document.getElementById('failLevel');
+    const failGif = document.getElementById('failGif');
+    const restartBtn = document.getElementById('restartBtn');
+    const failBackToStartBtn = document.getElementById('failBackToStartBtn');
+    // INTEGRAÇÃO PARABÉNS
+    const parabensDemais = document.getElementById('parabensDemais');
+    const videoFesta = document.getElementById('video-tela-festa');
+    const audioMaisLegal = document.getElementById('audio-maislegal');
+    let tentativasImpossivel = 0;
+    let parabensTimeout = null;
+
+    function stopAllMusics() {
+      bgmAbertura.pause(); bgmAbertura.currentTime = 0;
+      bgmIvan.pause(); bgmIvan.currentTime = 0;
+      bgmLuka.pause(); bgmLuka.currentTime = 0;
+      // INTEGRAÇÃO PARABÉNS
+      audioMaisLegal.pause();
+      audioMaisLegal.currentTime = 0;
+    }
+    function playCharMusic() {
+      if(selectedChar && selectedChar.id === 'ivan') {
+        if (bgmIvan.paused) {
+          stopAllMusics();
+          bgmIvan.currentTime = 0;
+          bgmIvan.play();
+        }
+      } else if(selectedChar && selectedChar.id === 'luka') {
+        if (bgmLuka.paused) {
+          stopAllMusics();
+          bgmLuka.currentTime = 0;
+          bgmLuka.play();
+        }
+      }
+    }
+    function playBgmAbertura() {
+      stopAllMusics();
+      bgmAbertura.currentTime = 0;
+      bgmAbertura.play();
+    }
+
+    // Personagens
+    CHARACTERS.forEach(c => {
+      const card = document.createElement('div');
+      card.className = 'character-card';
+      card.innerHTML = `
+        <img class="character-img" src="${c.chooseImg}" alt="${c.nome}">
+        <div class="character-name">${c.nome}</div>
+        <div class="character-desc">${c.desc}</div>
+      `;
+      card.onclick = () => {
+        document.querySelectorAll('.character-card').forEach(el => el.classList.remove('selected'));
+        card.classList.add('selected');
+        selectedChar = c;
+        selectBtn.disabled = false;
+      };
+      charactersDiv.appendChild(card);
+    });
+
+    startBtn.onclick = () => {
+      startScreen.style.display = 'none';
+      selectScreen.style.display = '';
+      playBgmAbertura();
+    };
+
+    selectBtn.onclick = () => {
+      selectScreen.style.display = 'none';
+      nivelScreen.style.display = '';
+      nivelFacilBtn.classList.add('enabled');
+      nivelFacilBtn.disabled = false;
+      nivelMedioBtn.classList.remove('enabled');
+      nivelMedioBtn.disabled = true;
+      nivelDificilBtn.classList.remove('enabled');
+      nivelDificilBtn.disabled = true;
+      stopAllMusics();
+    };
+
+    function getLevelNome() {
+      return selectedLevel.nome || '';
+    }
+
+    function startGame() {
+      flechasRestantes = 10;
+      aljavaFlechas.textContent = flechasRestantes;
+      arrows = [];
+      score = 0;
+      totalShots = 0;
+      scoreDiv.textContent = 'Pontuação 0';
+      surpriseContainer.style.display = 'none';
+      failContainer.style.display = 'none';
+      // INTEGRAÇÃO PARABÉNS
+      esconderParabensDemais();
+      playCharMusic();
+      // Só conta tentativas se for o nível impossível
+      if (selectedLevel && selectedLevel.id === 'dificil') tentativasImpossivel++;
+      else tentativasImpossivel = 0;
+    }
+
+    // INTEGRAÇÃO PARABÉNS
+    function mostrarParabensDemais() {
+      parabensDemais.style.display = 'flex';
+      videoFesta.style.display = 'none';
+      // Para a música do personagem!
+      stopAllMusics();
+      audioMaisLegal.pause();
+      audioMaisLegal.currentTime = 0;
+      parabensTimeout = setTimeout(() => {
+        videoFesta.style.display = 'block';
+        videoFesta.currentTime = 0;
+        videoFesta.play();
+        audioMaisLegal.currentTime = 0;
+        audioMaisLegal.play();
+      }, 2000);
+    }
+    function esconderParabensDemais() {
+      parabensDemais.style.display = 'none';
+      if (parabensTimeout) clearTimeout(parabensTimeout);
+      videoFesta.pause();
+      videoFesta.currentTime = 0;
+      audioMaisLegal.pause();
+      audioMaisLegal.currentTime = 0;
+    }
+
+    nivelFacilBtn.onclick = function() {
+      nivelIndex = 0;
+      selectedLevel = LEVELS[nivelIndex];
+      nivelScreen.style.display = 'none';
+      aljavaContainer.style.display = '';
+      startGame();
+    };
+    nivelMedioBtn.onclick = function() {}; // desabilitado
+    nivelDificilBtn.onclick = function() {}; // desabilitado
+
+    restartBtn.onclick = restartBtnVictory.onclick = function() {
+      failContainer.style.display = "none";
+      surpriseContainer.style.display = "none";
+      aljavaContainer.style.display = '';
+      // INTEGRAÇÃO PARABÉNS
+      esconderParabensDemais();
+      startGame();
+    };
+
+    // Avançar para próximo nível, habilita o botão correspondente e inicia o próximo
+    nextLevelBtn.onclick = function() {
+      if (nivelIndex < LEVELS.length - 1) {
+        nivelIndex++;
+        selectedLevel = LEVELS[nivelIndex];
+        // Habilita o próximo botão de nível
+        if (nivelIndex === 1) {
+          nivelMedioBtn.classList.add('enabled');
+          nivelMedioBtn.disabled = false;
+        }
+        if (nivelIndex === 2) {
+          nivelDificilBtn.classList.add('enabled');
+          nivelDificilBtn.disabled = false;
+        }
+        // Vai direto pro jogo sem mostrar tela de níveis, conforme UX anterior
+        surpriseContainer.style.display = "none";
+        aljavaContainer.style.display = '';
+        startGame();
+      } else {
+        // Se já está no último nível, só reinicia o mesmo
+        surpriseContainer.style.display = "none";
+        aljavaContainer.style.display = '';
+        startGame();
+      }
+    };
+
+    backToStartBtn.onclick = failBackToStartBtn.onclick = function() {
+      hideFailGif();
+      hideSurpriseGif();
+      // INTEGRAÇÃO PARABÉNS
+      esconderParabensDemais();
+      score = 0;
+      totalShots = 0;
+      arrows = [];
+      flechasRestantes = 10;
+      aljavaFlechas.textContent = flechasRestantes;
+      scoreDiv.textContent = 'Pontuação ' + score;
+      selectedChar = null;
+      selectedLevel = LEVELS[0];
+      nivelIndex = 0;
+      document.querySelectorAll('.character-card').forEach(el=>el.classList.remove('selected'));
+      selectBtn.disabled = true;
+      selectScreen.style.display = '';
+      nivelScreen.style.display = 'none';
+      aljavaContainer.style.display = 'none';
+      nivelFacilBtn.classList.add('enabled');
+      nivelFacilBtn.disabled = false;
+      nivelMedioBtn.classList.remove('enabled');
+      nivelMedioBtn.disabled = true;
+      nivelDificilBtn.classList.remove('enabled');
+      nivelDificilBtn.disabled = true;
+      stopAllMusics();
+      playBgmAbertura();
+      tentativasImpossivel = 0;
+    };
+
+    // ======= JOGO (igual ao anterior)
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const bowX = 140, bowY = canvas.height / 2, bowH = 120;
+    const arrowLength = 80;
+    const MAX_PULL = 90;
+    const MIN_PULL = 20;
+    let arrows = [];
+    let target = { x: canvas.width - 120, y: canvas.height / 2, r: 50 };
+    let score = 0, totalShots = 0;
+    let currentPull = 40;
+    let currentAngle = 0;
+    let flechasRestantes = 10;
+    let isDragging = false;
+    let dragStart = null, dragCurrent = null, dragOrigin = null, dragAngle = 0, dragPull = 40;
+
+    // Imagens
+    const loadedImages = {};
+    CHARACTERS.forEach(c => {
+      loadedImages[c.charImg] = new Image(); loadedImages[c.charImg].src = c.charImg;
+      if (c.winImg) { loadedImages[c.winImg] = new Image(); loadedImages[c.winImg].src = c.winImg; }
+      if (c.loseImg) { loadedImages[c.loseImg] = new Image(); loadedImages[c.loseImg].src = c.loseImg; }
+      loadedImages[c.chooseImg] = new Image(); loadedImages[c.chooseImg].src = c.chooseImg;
+    });
+
+    function drawCharacter() {
+      if (!selectedChar) return;
+      let charImg = loadedImages[selectedChar.charImg];
+      const imgWidth = 180, imgHeight = 240;
+      const imgX = bowX - imgWidth + 10, imgY = bowY - imgHeight / 2 + 40;
+      ctx.save();
+      ctx.globalAlpha = 1.0;
+      ctx.drawImage(charImg, imgX, imgY, imgWidth, imgHeight);
+      ctx.restore();
+      ctx.save();
+      ctx.font = "bold 24px sans-serif";
+      ctx.fillStyle = "#fff";
+      ctx.strokeStyle = "#187b2b";
+      ctx.lineWidth = 3;
+      ctx.textAlign = "center";
+      ctx.strokeText(selectedChar.nome, imgX + imgWidth/2, imgY + imgHeight - 10);
+      ctx.fillText(selectedChar.nome, imgX + imgWidth/2, imgY + imgHeight - 10);
+      ctx.restore();
+      let rect = canvas.getBoundingClientRect();
+      let aljavaCanvasX = imgX + imgWidth/2 - 32;
+      let aljavaCanvasY = imgY - 85;
+      aljavaContainer.style.left = (rect.left + window.scrollX + aljavaCanvasX) + "px";
+      aljavaContainer.style.top = (rect.top + window.scrollY + aljavaCanvasY) + "px";
+    }
+
+    function drawBow(pull, angleRad, tailX, tailY) {
+      let tail = typeof tailX === 'number' ? {x: tailX, y: tailY} : {x: bowX - pull, y: bowY};
+      let dx = tail.x - bowX;
+      let dy = tail.y - bowY;
+      let angle = Math.atan2(dy, dx);
+
+      ctx.save();
+      ctx.translate(bowX, bowY);
+      ctx.scale(-1, 1);
+      ctx.rotate(-angle);
+
+      ctx.save();
+      ctx.strokeStyle = "#774c1a";
+      ctx.lineWidth = 10;
+      ctx.beginPath();
+      ctx.arc(0, 0, bowH/2, Math.PI/2, Math.PI*3/2, true);
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.save();
+      ctx.strokeStyle = "#fff";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, -bowH/2);
+      ctx.lineTo(-pull, 0);
+      ctx.lineTo(0, bowH/2);
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.save();
+      ctx.translate(-pull, 0);
+      ctx.rotate(0);
+      ctx.strokeStyle = "#444";
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(arrowLength, 0);
+      ctx.stroke();
+      ctx.fillStyle = "#c33";
+      ctx.beginPath();
+      ctx.moveTo(arrowLength, 0);
+      ctx.lineTo(arrowLength - 10, -6);
+      ctx.lineTo(arrowLength - 10, 6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "#36b";
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(-10, -8);
+      ctx.lineTo(-10, 8);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      ctx.restore();
+
+      return { tailX: bowX + Math.cos(angle)*(-pull), tailY: bowY + Math.sin(angle)*(-pull) };
+    }
+
+    function drawTarget() {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(target.x, target.y, target.r, 0, Math.PI*2);
+      ctx.fillStyle = "white";
+      ctx.fill();
+      for (let i = 4; i >= 1; i--) {
+        ctx.beginPath();
+        ctx.arc(target.x, target.y, target.r * i/5, 0, Math.PI*2);
+        ctx.fillStyle = i % 2 ? "#f22" : "#fff";
+        ctx.fill();
+      }
+      ctx.beginPath();
+      ctx.arc(target.x, target.y, target.r/6, 0, Math.PI*2);
+      ctx.fillStyle = "#ffd700";
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawArrows() {
+      for (let arrow of arrows) {
+        ctx.save();
+        ctx.translate(arrow.x, arrow.y);
+        ctx.rotate(arrow.angle);
+        ctx.strokeStyle = "#444";
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(arrowLength, 0);
+        ctx.stroke();
+        ctx.fillStyle = "#c33";
+        ctx.beginPath();
+        ctx.moveTo(arrowLength, 0);
+        ctx.lineTo(arrowLength - 10, -6);
+        ctx.lineTo(arrowLength - 10, 6);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = "#36b";
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-10, -8);
+        ctx.lineTo(-10, 8);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    function draw3dFloor() {
+      ctx.save();
+      ctx.fillStyle = "#6b8a3b";
+      ctx.beginPath();
+      ctx.moveTo(0, canvas.height * 0.85);
+      ctx.lineTo(canvas.width, canvas.height * 0.85);
+      ctx.lineTo(canvas.width, canvas.height);
+      ctx.lineTo(0, canvas.height);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = "#fff4";
+      ctx.lineWidth = 2;
+      for (let i=0; i<10; i++) {
+        let px = 50 + i * 80;
+        ctx.beginPath();
+        ctx.moveTo(px, canvas.height * 0.85);
+        ctx.lineTo(canvas.width / 2, canvas.height * 0.45);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function updateArrows() {
+      for (let arrow of arrows) {
+        if (!arrow.hit) {
+          arrow.x += arrow.vx;
+          arrow.y += arrow.vy;
+          arrow.vy += 0.05;
+          arrow.angle = Math.atan2(arrow.vy, arrow.vx);
+          let tipX = arrow.x + arrowLength * Math.cos(arrow.angle);
+          let tipY = arrow.y + arrowLength * Math.sin(arrow.angle);
+          let dx = tipX - target.x;
+          let dy = tipY - target.y;
+          let dist = Math.sqrt(dx*dx + dy*dy);
+          if (dist < target.r && !arrow.hit) {
+            arrow.hit = true;
+            arrow.vx = 0;
+            arrow.vy = 0;
+            arrow.x = tipX - arrowLength * Math.cos(arrow.angle);
+            arrow.y = tipY - arrowLength * Math.sin(arrow.angle);
+
+            let p = selectedLevel.pontos;
+            let pontos;
+            if(dist < target.r/6) pontos = p[0];
+            else if(dist < target.r*2/6) pontos = p[1];
+            else if(dist < target.r*3/6) pontos = p[2];
+            else if(dist < target.r*4/6) pontos = p[3];
+            else if(dist < target.r*5/6) pontos = p[4];
+            else pontos = p[5];
+            score += pontos;
+            scoreDiv.textContent = 'Pontuação ' + score + (pontos>0 ? `  (+${pontos})` : '');
+            scoreDiv.classList.add('pontuada');
+            setTimeout(()=>{
+              scoreDiv.classList.remove('pontuada');
+              scoreDiv.textContent = 'Pontuação ' + score;
+            }, 900);
+          }
+        }
+      }
+    }
+
+    function showSurpriseGif(points) {
+      // INTEGRAÇÃO PARABÉNS
+      if (selectedLevel && selectedLevel.id === 'dificil') {
+        mostrarParabensDemais();
+      } else {
+        // Normal
+        surpriseLevel.textContent = getLevelNome();
+        surpriseText.textContent = 'Parabéns!';
+        surpriseScore.textContent = `Pontuação ${points}`;
+        surpriseGif.src = selectedChar.winImg;
+        surpriseContainer.style.display = "block";
+      }
+    }
+
+    function showFailGif() {
+      failLevel.textContent = getLevelNome();
+      failContainer.style.display = "block";
+      if (selectedChar && selectedChar.loseImg) {
+        failGif.src = selectedChar.loseImg;
+        failGif.style.display = "block";
+      } else {
+        failGif.style.display = "none";
+      }
+    }
+    function hideFailGif() {
+      failContainer.style.display = "none";
+    }
+    function hideSurpriseGif() {
+      surpriseContainer.style.display = "none";
+      surpriseScore.textContent = '';
+    }
+    function getCanvasCoords(evt) {
+      let rect = canvas.getBoundingClientRect();
+      let clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+      let clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
+      return { x: clientX - rect.left, y: clientY - rect.top };
+    }
+    function isNearArrowTail(pt) {
+      let pull = currentPull;
+      let tailX = bowX - pull;
+      let tailY = bowY;
+      let dist = Math.sqrt((pt.x-tailX)**2 + (pt.y-tailY)**2);
+      return dist < 28;
+    }
+    canvas.addEventListener('mousedown', (evt) => {
+      let pt = getCanvasCoords(evt);
+      if (!isNearArrowTail(pt)) return;
+      isDragging = true;
+      dragStart = pt;
+      dragCurrent = pt;
+      dragOrigin = { tailX: bowX - currentPull, tailY: bowY };
+      dragAngle = 0;
+      dragPull = currentPull;
+    });
+    canvas.addEventListener('touchstart', (evt) => {
+      let pt = getCanvasCoords(evt);
+      if (!isNearArrowTail(pt)) return;
+      isDragging = true;
+      dragStart = pt;
+      dragCurrent = pt;
+      dragOrigin = { tailX: bowX - currentPull, tailY: bowY };
+      dragAngle = 0;
+      dragPull = currentPull;
+    });
+    canvas.addEventListener('mousemove', (evt) => {
+      if (!isDragging) return;
+      dragCurrent = getCanvasCoords(evt);
+      let dx = dragCurrent.x - bowX;
+      let dy = dragCurrent.y - bowY;
+      dragAngle = Math.atan2(dy, dx);
+      dragPull = Math.min(MAX_PULL, Math.max(MIN_PULL, bowX - dragCurrent.x));
+    });
+    canvas.addEventListener('touchmove', (evt) => {
+      if (!isDragging) return;
+      dragCurrent = getCanvasCoords(evt);
+      let dx = dragCurrent.x - bowX;
+      let dy = dragCurrent.y - bowY;
+      dragAngle = Math.atan2(dy, dx);
+      dragPull = Math.min(MAX_PULL, Math.max(MIN_PULL, bowX - dragCurrent.x));
+    });
+
+    function shootByDrag() {
+      if (!dragStart || !dragCurrent || flechasRestantes <= 0) return;
+      let tailX = dragCurrent.x;
+      let tailY = dragCurrent.y;
+      if (tailX > bowX - MIN_PULL) tailX = bowX - MIN_PULL;
+      let dx = dragCurrent.x - bowX;
+      let dy = dragCurrent.y - bowY;
+      let pull = Math.min(MAX_PULL, Math.max(MIN_PULL, bowX - dragCurrent.x));
+      let angleRad = Math.atan2(dy, dx);
+      if (tailX > bowX - MIN_PULL) { isDragging = false; dragStart = null; dragCurrent = null; dragOrigin = null; return; }
+      let tip = {
+        x: bowX + Math.cos(angleRad)*(-pull),
+        y: bowY + Math.sin(angleRad)*(-pull)
+      };
+      try { flechaSound.currentTime = 0; flechaSound.play(); } catch(e){}
+      fireArrow(pull, tip.x, tip.y, angleRad + Math.PI);
+      currentAngle = 0;
+      currentPull = 40;
+      isDragging = false;
+      dragStart = null;
+      dragCurrent = null;
+      dragOrigin = null;
+    }
+
+    canvas.addEventListener('mouseup', (evt) => { if (isDragging) shootByDrag(); });
+    canvas.addEventListener('touchend', (evt) => { if (isDragging) shootByDrag(); });
+
+    function fireArrow(pull, tailX, tailY, angleRad) {
+      if (!selectedChar || flechasRestantes <= 0) return;
+      let speed = (8 + pull * 0.8);
+      let vx = speed * Math.cos(angleRad);
+      let vy = speed * Math.sin(angleRad);
+      arrows.push({
+        x: tailX,
+        y: tailY,
+        vx: vx,
+        vy: vy,
+        angle: angleRad,
+        hit: false
+      });
+      totalShots++;
+      flechasRestantes--;
+      if (flechasRestantes < 0) flechasRestantes = 0;
+      aljavaFlechas.textContent = flechasRestantes;
+      if (totalShots === 10) {
+        // INTEGRAÇÃO PARABÉNS
+        if (selectedLevel && selectedLevel.id === 'dificil' && tentativasImpossivel >= 4 && score < PONTOS_PARA_VENCER) {
+          showSurpriseGif(score);
+          tentativasImpossivel = 0;
+        } else if (score >= PONTOS_PARA_VENCER) {
+          showSurpriseGif(score);
+          if (selectedLevel && selectedLevel.id === 'dificil') tentativasImpossivel = 0;
+        } else {
+          showFailGif();
+        }
+      }
+    }
+
+    function drawDeformedBow() {
+      if (isDragging && dragStart && dragCurrent && dragOrigin) {
+        let tailX = dragCurrent.x;
+        let tailY = dragCurrent.y;
+        if (tailX > bowX - MIN_PULL) tailX = bowX - MIN_PULL;
+        let dx = tailX - bowX;
+        let dy = tailY - bowY;
+        let pull = Math.min(MAX_PULL, Math.max(MIN_PULL, bowX - tailX));
+        let angleRad = Math.atan2(dy, dx);
+        drawBow(pull, angleRad, tailX, tailY);
+        return true;
+      }
+      return false;
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      draw3dFloor();
+      drawTarget();
+      drawCharacter();
+      drawArrows();
+      if (!drawDeformedBow()) {
+        drawBow(currentPull, 0);
+      }
+    }
+    function loop() {
+      updateArrows();
+      draw();
+      requestAnimationFrame(loop);
+    }
+    hideFailGif();
+    hideSurpriseGif();
+    loop();
+
+    window.addEventListener('DOMContentLoaded', () => {
+      document.body.addEventListener('pointerdown', function oneTime() {
+        if (startScreen.style.display !== "none") playBgmAbertura();
+        document.body.removeEventListener('pointerdown', oneTime);
+      });
+    });
+  </script>
+</body>
+</html>
